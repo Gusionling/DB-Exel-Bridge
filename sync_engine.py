@@ -65,10 +65,45 @@ class SyncEngine:
             db_df.set_index(self.id_column, inplace=True)
 
             # 1, 추가된 레코드 처리
+            # 없는 데이터를 loc을 활용해서 인덱싱하여 찾는다.
             new_records = excel_df.loc[~excel_df.index.isin(db_df.index)]
             if not new_records.empty:
                 new_records_df = new_records.reset_index()  # ID 열을 다시 일반 열로 변환
                 self.db_handler.insert_records(new_records_df)
                 logger.info(f"{len(new_records)}개의 새 레코드가 추가되었습니다")
 
-                
+            
+            # 2. 변경된 레코드 처리
+            common_records = excel_df.loc[excel_df.index.isin(db_df.indexl)]
+            updates_count = 0
+
+            for idx in common_records.index:
+                excel_row = excel_df.loc[idx]
+                db_row = db_df.loc[idx]
+
+                # 값이 다른지 확인
+                if not excel_row.equals(db_row):
+                    update_data = {col: excel_row[col] for col in excel_row.index}
+                    self.db_handler.update_record(idx, update_data)
+                    updates_count += 1
+
+                if updates_count > 0:
+                    logger.info(f"{updates_count}개의 레코드가 업데이트되었습니다")
+
+            
+            # 삭제된 레코드 처리 (선택적)
+            deleted_records = db_df.loc[~db_df.index.isin(excel_df.index)]
+            if not deleted_records.empty:
+                for idx in deleted_records.index:
+                    self.db_handler.delete_record(idx)
+                logger.info(f"{len(deleted_records)}개의 레코드가 삭제되었습니다.")
+
+            elapsed_time = time.time() - start_time
+            logger.info(f"Excel ->  DB 동기화 완료 (소요 시간: {elapsed_time:.2f}초)")
+            return True
+        
+        except Exception as e:
+            logger.error(f"Excel -> DB 동기화 오류: {str(e)}")
+            return False
+
+        
