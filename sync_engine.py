@@ -105,5 +105,38 @@ class SyncEngine:
         except Exception as e:
             logger.error(f"Excel -> DB 동기화 오류: {str(e)}")
             return False
+    
+    def db_to_excel(self):
+        """
+        DB -> Excel 동기화
 
+        Returns:
+            bool: 동기화 성공 여부
+
+        """
+        logger.info("DB-> Excel 동기화 시작")
+        start_time = time.time()
+
+        try:
+            #DB 데이터 읽기
+            db_df = self.db_handler.read_data()
+            if db_df is None or db_df.empty:
+                logger.warning("DB에 데이터가 없습니다.")
+                return False
+            
+            #파일에 저장
+            result = self.excel_handler.write_data(db_df)
+            
+            elapsed_time = time.time() - start_time
+            logger.info(f"DB-> Excel 동기화 완료 (소요시간: {elapsed_time:.2f}초)")
+            return result
         
+        except Exception as e:
+            logger.error(f"DB-> Excel동기화 오류: {str(e)}")
+            return False
+        
+                
+                
+
+
+
